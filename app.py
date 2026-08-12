@@ -1,4 +1,4 @@
-
+import os
 import streamlit as st
 from groq import Groq
 
@@ -18,20 +18,17 @@ st.markdown(
     "leitura avançada, técnica e som de instrumentos da orquestra, além de ritmo!"
 )
 
-# 2. Configuração do cliente Groq utilizando os segredos do Streamlit
-# Certifique-se de configurar 'GROQ_API_KEY' no st.secrets (ou secrets.toml)
-try:
-    groq_api_key = st.secrets["GROQ_API_KEY"]
-except Exception:
-    groq_api_key = None
+# 2. Busca a chave DIRETO das variáveis de ambiente do servidor
+groq_api_key = os.getenv("GROQ_API_KEY")
 
 if not groq_api_key:
-    st.error("A chave de API do Groq (GROQ_API_KEY) não foi encontrada nos segredos do Streamlit.")
+    st.error("A chave de API do Groq (GROQ_API_KEY) não foi encontrada no servidor.")
     st.stop()
 
+# Inicializa o cliente Groq
 client = Groq(api_key=groq_api_key)
 
-# 3. Inicialização do histórico de mensagens no estado da sessão do Streamlit
+# 3. Inicialização do histórico de mensagens no estado da sessão
 if "messages" not in st.session_state:
     st.session_state.messages = [
         {
@@ -52,7 +49,7 @@ for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-# 4. Captura da entrada do usuário via chat input do Streamlit
+# 4. Captura da entrada do usuário via chat input
 if prompt := st.chat_input("Digite sua dúvida sobre música, instrumentos ou partituras..."):
     # Adiciona a mensagem do usuário ao histórico
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -61,15 +58,15 @@ if prompt := st.chat_input("Digite sua dúvida sobre música, instrumentos ou pa
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # 5. Comunicação com a API do Groq e exibição da resposta em tempo real
+    # 5. Comunicação com a API do Groq e resposta em streaming
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
         
         try:
-            # Requisição para o modelo Llama 3 via Groq
+            # Requisição para o modelo Llama via Groq
             stream = client.chat.completions.create(
-                model="llama3-70b-8192",
+                model="llama-3.3-70b-versatile",
                 messages=[
                     {"role": m["role"], "content": m["content"]}
                     for m in st.session_state.messages
@@ -79,7 +76,7 @@ if prompt := st.chat_input("Digite sua dúvida sobre música, instrumentos ou pa
                 max_tokens=1024
             )
             
-            # Processamento do fluxo de resposta (streaming)
+            # Processamento do fluxo de resposta
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     full_response += chunk.choices[0].delta.content
